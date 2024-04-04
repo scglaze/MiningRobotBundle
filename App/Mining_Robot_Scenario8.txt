@@ -1,0 +1,16 @@
+%%% Scenario 8 %%%
+#const n = 10.
+
+has_risk_level(l0, high).
+has_risk_level(l1, high).
+has_risk_level(l2, medium).
+has_risk_level(l3, medium).
+has_risk_level(l4, low).
+has_risk_level(l5, medium).
+has_risk_level(l6, medium).
+has_risk_level(l7, low).
+has_risk_level(l8, medium).
+holds(ore_loc(gold, l7), 0).
+holds(ore_loc(silver, l4), 0).
+holds(ore_loc(iron, l0), 0).
+holds(agent_loc(l1), 0).

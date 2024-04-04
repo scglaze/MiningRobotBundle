@@ -1,0 +1,11 @@
+%%% Policies %%%
+
+%% Obligation Policies %%
+% Obligated not to collect silver without collecting gold first.
+obligated_not(collect(silver), I) :- step(I), -holds(has_ore(gold), I).
+
+% Obligated not to collect iron without collecting silver first.
+obligated_not(collect(iron), I) :- step(I), -holds(has_ore(silver), I).
+
+%% Authorization Policies %%
+% No Authorization Policies by default %

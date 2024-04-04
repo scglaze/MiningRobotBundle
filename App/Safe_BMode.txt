@@ -1,0 +1,36 @@
+%%% Safe Behavior Mode %%%
+1 {occurs(A,I) : action(A)} 1:- step(I), I >= n1.
+
+permitted_flag(A, I) :- action(A), step(I), occurs(A, I), permitted(A, I), I >= n1.
+count_permitted_flag(N) :- #count{ A,I: permitted_flag(A, I)} = N. 
+
+weakly_permitted_flag(A, I) :- action(A), step(I), occurs(A, I), not permitted(A, I), not -permitted(A, I), I >= n1.
+count_weakly_permitted_flag(N) :- #count{ A,I: weakly_permitted_flag(A, I) } = N. 
+
+not_permitted_flag(A, I) :- action(A), step(I), occurs(A, I), -permitted(A, I), I >= n1.
+count_not_permitted_flag(N) :- #count{ A,I: not_permitted_flag(A, I) } = N. 
+
+violated_obligated_flag(A, I) :- action(A), step(I), obligated(A, I), not occurs(A, I), I >= n1.
+violated_obligated_flag(A, I) :- action(A), step(I), obligated_not(A, I), occurs(A, I), I >= n1.
+
+count_violated_obligations(N) :- #count{ A,I: violated_obligated_flag(A, I) } = N.
+
+wait_count(N) :- #count{ I : occurs(wait, I), I >= n1 } = N.
+
+plan_length(N) :- wait_count(N1), N = n - n1 + 1 - N1.
+percentage_permitted(N) :- count_permitted_flag(N1), plan_length(N2), N = (N1 * 100) / N2.
+% wait is also weakly permitted; calculate percentage by dividing by (n+1)
+percentage_weakly_permitted(N) :- count_weakly_permitted_flag(N1), N = (N1 * 100)/(n-n1+1).  %plan_length(N2), N = (N1 * 100) / N2.
+percentage_not_permitted(N) :- not_permitted_flag(N1), plan_length(N2), N = (N1 * 100) / N2.
+
+% Not authorized to move into tiles of high risk level
+obligated_not(move(L1, L2), I) :- loc(L1), loc(L2), step(I), has_risk_level(L2, high).
+
+% Not authorized to move into tiles of medium risk level
+obligated_not(move(L1, L2), I) :- loc(L1), loc(L2), step(I), has_risk_level(L2, medium).
+
+% Cannot violate any obligations
+:- count_violated_obligations(N), N != 0.
+
+% The higher the number @x, the higher the priority
+#maximize{ N@1: wait_count(N); N1@2 : percentage_weakly_permitted(N1); N2@3 : percentage_permitted(N2); NS@4 : subgoal_count(NS) }.

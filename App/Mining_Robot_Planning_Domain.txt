@@ -1,0 +1,120 @@
+%%% Dynamic Domain %%%
+
+% n has been moved to behavior mode files to personalize a n value for each scenario
+% This was done due to some scenarios running extremely slowly with n=15
+%#const n = 15.
+
+step(0..n).
+next(I, I1) :- step(I), step(I1), I1 = I+1.
+
+%% OBJECT DEFINITONS %%
+% Locations %
+loc(l0).
+loc(l1).
+loc(l2).
+loc(l3).
+loc(l4).
+loc(l5).
+loc(l6).
+loc(l7).
+loc(l8).
+
+connected(l0, l1).
+connected(l0, l3).
+connected(l1, l2).
+connected(l1, l4).
+connected(l2, l5).
+connected(l3, l4).
+connected(l3, l6).
+connected(l4, l5).
+connected(l4, l7).
+connected(l5, l8).
+connected(l6, l7).
+connected(l7, l8).
+
+% Two locations are connected if they share an edge.
+connected(L1, L2) :- loc(L1), loc(L2), connected(L2, L1).
+
+% Two locations are not connected unless it is explicitly stated.
+-connected(L1, L2) :- loc(L1), loc(L2), not connected(L1, L2). 
+
+% Ores %
+ore(gold).
+ore(silver).
+ore(iron).
+
+% has_risk_level(L, R) means loc L has risk_level R. 
+risk_level(low).
+risk_level(medium).
+risk_level(high).
+
+% FLUENTS %
+fluent(inertial, agent_loc(L)) :- loc(L).
+fluent(inertial, has_ore(O)) :- ore(O).
+fluent(inertial, ore_loc(O, L)) :- ore(O), loc(L).
+
+% ACTIONS %
+action(move(L1, L2)) :- loc(L1), loc(L2), L1 != L2.
+action(collect(O)) :- ore(O).
+action(wait).
+
+% AXOIMS %
+% The agent is located in a location when it moves to it
+holds(agent_loc(L2), I1) :- occurs(move(L1, L2), I), I < n, next(I, I1).
+
+% The agent is in possession of an ore when it collects that ore.
+holds(has_ore(O), I1) :- occurs(collect(O), I), I < n, next(I, I1).
+
+% Cannot collect ore if there is no ore at the location.
+-occurs(collect(O), I) :- step(I), holds(agent_loc(L), I), -holds(ore_loc(O, L), I).
+
+% When an ore is collected, it is no longer located in that square.
+-holds(ore_loc(O, L), I1) :- step(I1), loc(L), occurs(collect(O), I), next(I, I1).
+
+% The agent cannot move from a location if it is not located at the location to begin with.
+-occurs(move(L0, L1), I) :- loc(L1), -holds(agent_loc(L0), I).
+
+% The agent cannot from between two locations if they are not connected.
+-occurs(move(L0, L1), I) :- step(I), -connected(L0, L1).
+
+% The agent cannot be located in two different locations at the same time.
+-holds(agent_loc(L1), I) :- holds(agent_loc(L0), I), loc(L1), L0 != L1.
+
+% Two actions cannot be performed in the same time step.
+:- occurs(A1, I), occurs(A2, I), action(A1), action(A2), A1 != A2, step(I).
+
+% Cannot wait before an actual action 
+:- occurs(wait, I1), occurs(A, I2), I2 > I1, I1 >= n1, A != wait.
+
+% Once the goal is complete, wait is the only allowed action.
+:- occurs(A, I1), A != wait, goal(I), I1 >= I.
+
+%% GENERAL INERTIA AXIOMS FOR INERTIAL FLUENTS %%
+holds(F,I1) :- fluent(inertial,F),
+               holds(F,I),                  
+               not -holds(F,I1),
+               I < n,
+               next(I, I1).
+
+-holds(F,I1) :- fluent(inertial,F),
+                        -holds(F,I),                
+                not holds(F,I1),
+                I < n,
+                next(I, I1).
+				
+-holds(F, 0) :- fluent(inertial, F), not holds(F, 0).
+
+%%% Planning Module %%%
+goal(I) :- holds(has_ore(gold), I), holds(has_ore(silver), I), holds(has_ore(iron), I), step(I).
+
+subgoal(has_ore(gold)).
+subgoal(has_ore(silver)).
+subgoal(has_ore(iron)).
+
+subgoal_count(N) :- #count{F : subgoal(F), holds(F, n)} = N.
+
+occurs(A, I) | -occurs(A, I) :- action(A), step(I),  I < n. 
+something_happened(I) :- occurs(A, I).
+:- step(J), goal(I), not goal(I0), I0 = I-1, J < I, not something_happened(J).
+
+#show occurs/2.

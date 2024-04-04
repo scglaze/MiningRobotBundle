@@ -1,0 +1,6 @@
+%%% Risky Behavior Mode %%%
+1 {occurs(A,I) : action(A)} 1:- step(I), I >= n1.
+
+wait_count(N) :- #count{ I : occurs(wait, I), I >= n1 } = N.
+
+#maximize{ N@1: wait_count(N); NS@2: subgoal_count(NS)}.
